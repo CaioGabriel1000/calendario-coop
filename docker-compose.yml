@@ -2,7 +2,10 @@ services:
   db:
     image: postgres:18
     restart: unless-stopped
-    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB no arquivo .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER no arquivo .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
     volumes:
       - pgdata:/var/lib/postgresql
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
@@ -19,8 +22,25 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?Defina DOMINIO no arquivo .env}
+    depends_on:
+      - app
     ports:
-      - "127.0.0.1:8000:8000"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:80:80"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:
