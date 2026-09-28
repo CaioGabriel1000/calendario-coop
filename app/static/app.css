@@ -270,6 +270,23 @@ button.calendario-dia:hover {
     padding: 0.3rem;
   }
 
+  .calendario-acoes {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .calendario-usuario {
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .calendario-usuario > span {
+    max-width: min(12ch, 40vw);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .marcacao-chip {
     padding-inline: 0.22rem;
     font-size: 0.62rem;
