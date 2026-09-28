@@ -5,9 +5,28 @@ from typing import Annotated
 import typer
 
 from app.db import SessionLocal
-from app.usuarios import criar_usuario, listar_usuarios
+from app.relogio import hoje
+from app.usuarios import (
+    atualizar_usuario,
+    criar_usuario,
+    desativar_usuario,
+    listar_usuarios,
+    reativar_usuario,
+    resetar_senha_usuario,
+)
 
 app = typer.Typer(no_args_is_help=True, help="Administração do Calendário Coop.")
+
+
+def obter_senha(senha: str | None) -> str:
+    if senha is not None:
+        return senha
+    senha = typer.prompt("Senha", hide_input=True)
+    confirmacao = typer.prompt("Confirme a senha", hide_input=True)
+    if senha != confirmacao:
+        typer.echo("Erro: as senhas não conferem.", err=True)
+        raise typer.Exit(code=1)
+    return senha
 
 
 @app.command("create-user")
@@ -20,12 +39,7 @@ def create_user(
         typer.Option("--senha", help="Senha (evite usar no shell)."),
     ] = None,
 ) -> None:
-    if senha is None:
-        senha = typer.prompt("Senha", hide_input=True)
-        confirmacao = typer.prompt("Confirme a senha", hide_input=True)
-        if senha != confirmacao:
-            typer.echo("Erro: as senhas não conferem.", err=True)
-            raise typer.Exit(code=1)
+    senha = obter_senha(senha)
 
     db = SessionLocal()
     try:
@@ -46,6 +60,102 @@ def create_user(
         db.close()
 
     typer.echo(f"Usuário {usuario.email} criado com sucesso.")
+
+
+@app.command("reset-password")
+def reset_password(
+    email: Annotated[str, typer.Option("--email", help="E-mail da conta.")],
+    senha: Annotated[
+        str | None,
+        typer.Option("--senha", help="Nova senha (evite usar no shell)."),
+    ] = None,
+) -> None:
+    senha = obter_senha(senha)
+    db = SessionLocal()
+    try:
+        usuario = resetar_senha_usuario(db, email=email, senha=senha)
+    except ValueError as exc:
+        typer.echo(f"Erro: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        typer.echo("Erro: não foi possível redefinir a senha.", err=True)
+        raise typer.Exit(code=1) from exc
+    finally:
+        db.close()
+    typer.echo(f"Senha do usuário {usuario.email} redefinida; sessões encerradas.")
+
+
+@app.command("update-user")
+def update_user(
+    email: Annotated[str, typer.Option("--email", help="E-mail atual da conta.")],
+    novo_email: Annotated[
+        str | None,
+        typer.Option("--novo-email", help="Novo e-mail de acesso."),
+    ] = None,
+    nome: Annotated[str | None, typer.Option("--nome", help="Novo nome.")] = None,
+    apelido: Annotated[
+        str | None,
+        typer.Option("--apelido", help="Novo apelido com até 12 caracteres."),
+    ] = None,
+) -> None:
+    db = SessionLocal()
+    try:
+        usuario = atualizar_usuario(
+            db,
+            email=email,
+            novo_email=novo_email,
+            nome=nome,
+            apelido=apelido,
+        )
+    except ValueError as exc:
+        typer.echo(f"Erro: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        typer.echo("Erro: não foi possível atualizar o usuário.", err=True)
+        raise typer.Exit(code=1) from exc
+    finally:
+        db.close()
+    typer.echo(f"Usuário {usuario.email} atualizado com sucesso.")
+
+
+@app.command("deactivate-user")
+def deactivate_user(
+    email: Annotated[str, typer.Option("--email", help="E-mail da conta.")],
+) -> None:
+    if not typer.confirm(f"Confirma a desativação de {email}?"):
+        typer.echo("Operação cancelada.")
+        return
+
+    db = SessionLocal()
+    try:
+        usuario = desativar_usuario(db, email=email, data_hoje=hoje())
+    except ValueError as exc:
+        typer.echo(f"Erro: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        typer.echo("Erro: não foi possível desativar o usuário.", err=True)
+        raise typer.Exit(code=1) from exc
+    finally:
+        db.close()
+    typer.echo(f"Usuário {usuario.email} desativado; sessões encerradas.")
+
+
+@app.command("reactivate-user")
+def reactivate_user(
+    email: Annotated[str, typer.Option("--email", help="E-mail da conta.")],
+) -> None:
+    db = SessionLocal()
+    try:
+        usuario = reativar_usuario(db, email=email)
+    except ValueError as exc:
+        typer.echo(f"Erro: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        typer.echo("Erro: não foi possível reativar o usuário.", err=True)
+        raise typer.Exit(code=1) from exc
+    finally:
+        db.close()
+    typer.echo(f"Usuário {usuario.email} reativado com sucesso.")
 
 
 @app.command("list-users")
