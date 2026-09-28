@@ -5,7 +5,12 @@ document.body.addEventListener("htmx:beforeSwap", (event) => {
   }
 });
 
-document.body.addEventListener("htmx:afterSettle", () => {
+document.body.addEventListener("htmx:afterSettle", (event) => {
+  const alvo = event.detail.target;
+  if (!alvo?.matches("#painel-host, #painel-dia")) {
+    return;
+  }
+
   const dialog = document.querySelector("#painel-host #painel-dia");
   if (dialog && !dialog.open) {
     dialog.showModal();
