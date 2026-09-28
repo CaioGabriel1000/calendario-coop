@@ -7,7 +7,8 @@
   {{ controle_hoje(mes, mes_atual, true) }}
 {% endif %}
 
-<div id="grade-container" hx-get="/grade?mes={{ mes.chave }}" hx-trigger="every 30s"
+<div id="grade-container" hx-get="/grade?mes={{ mes.chave }}&somente_grade=1"
+     hx-trigger="every 30s [document.visibilityState === 'visible']"
      hx-target="this" hx-swap="outerHTML">
   <div class="calendario-grade" role="grid" aria-label="{{ mes.titulo }}">
     <div class="calendario-cabecalho-semana" role="row">

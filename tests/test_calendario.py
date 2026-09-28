@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 import re
 
 import pytest
+from sqlalchemy import select
 
 from app.auth import hash_token
 from app.calendario import (
@@ -155,3 +156,47 @@ def test_mes_invalido_na_pagina_redireciona_para_mes_valido(client, db_session, 
 
     assert resposta.status_code == 303
     assert resposta.headers["location"] == "/?mes=2027-09"
+
+
+def test_polling_atualiza_somente_grade_e_pausa_em_aba_oculta(
+    client, db_session, monkeypatch
+):
+    autenticar(client, db_session)
+    data_hoje = date(2026, 9, 28)
+    monkeypatch.setattr("app.rotas.inicio.hoje", lambda: data_hoje)
+    monkeypatch.setattr("app.rotas.calendario.hoje", lambda: data_hoje)
+
+    pagina = client.get("/")
+    polling = client.get(
+        "/grade?mes=2026-09&somente_grade=1",
+        headers={"HX-Request": "true"},
+    )
+
+    assert pagina.status_code == polling.status_code == 200
+    assert "every 30s [document.visibilityState === 'visible']" in pagina.text
+    assert "somente_grade=1" in pagina.text
+    assert 'id="grade-container"' in polling.text
+    assert 'id="mes-titulo"' not in polling.text
+    assert 'id="controle-anterior"' not in polling.text
+    assert 'hx-swap-oob' not in polling.text
+    assert 'id="painel-dia"' not in polling.text
+    assert 'id="painel-host"' in pagina.text
+
+
+def test_sessao_expirada_durante_polling_redireciona_para_login(
+    client, db_session
+):
+    autenticar(client, db_session)
+    sessao = db_session.scalar(select(Sessao))
+    assert sessao is not None
+    sessao.expira_em = datetime.now(timezone.utc) - timedelta(seconds=1)
+    db_session.flush()
+
+    resposta = client.get(
+        "/grade?mes=2026-09&somente_grade=1",
+        headers={"HX-Request": "true"},
+        follow_redirects=False,
+    )
+
+    assert resposta.status_code == 401
+    assert resposta.headers["HX-Redirect"] == "/login"

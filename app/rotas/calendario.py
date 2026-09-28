@@ -37,6 +37,7 @@ templates = Jinja2Templates(directory=Path(__file__).resolve().parents[1] / "tem
 def grade(
     request: Request,
     mes: str | None = Query(default=None),
+    somente_grade: bool = Query(default=False),
     autenticacao: SessaoAutenticada = Depends(requer_sessao),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -53,7 +54,7 @@ def grade(
     contexto = contexto_calendario(
         mes_calendario, data_hoje, db, autenticacao.usuario.id
     )
-    contexto.update({"request": request, "oob": True})
+    contexto.update({"request": request, "oob": not somente_grade})
     return templates.TemplateResponse(
         request=request,
         name="parciais/grade.html",
