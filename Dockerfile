@@ -20,7 +20,7 @@ COPY migrations ./migrations
 COPY tests ./tests
 COPY alembic.ini ./
 COPY docker/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh && uv sync --locked
 
 EXPOSE 8000
 ENTRYPOINT ["./entrypoint.sh"]
