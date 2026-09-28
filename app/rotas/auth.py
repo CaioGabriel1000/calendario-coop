@@ -1,6 +1,8 @@
 """Rotas de login e logout."""
 
 import secrets
+from datetime import timedelta
+from math import ceil
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -20,6 +22,7 @@ from app.auth import (
 from app.config import get_settings
 from app.db import get_db
 from app.models import Usuario
+from app.relogio import agora_utc
 from app.senhas import verificar_senha
 
 router = APIRouter()
@@ -68,8 +71,12 @@ def login(
         raise HTTPException(status_code=403, detail="Token CSRF inválido.")
 
     remover_sessoes_expiradas(db)
-    usuario = db.scalar(select(Usuario).where(Usuario.email == email.strip().lower()))
-    if usuario is None or not usuario.ativo or not verificar_senha(usuario.senha_hash, senha):
+    usuario = db.scalar(
+        select(Usuario)
+        .where(Usuario.email == email.strip().lower())
+        .with_for_update()
+    )
+    if usuario is None or not usuario.ativo:
         response = templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -78,6 +85,43 @@ def login(
         response.status_code = 200
         return response
 
+    agora = agora_utc()
+    if usuario.bloqueado_ate is not None and usuario.bloqueado_ate > agora:
+        minutos = max(1, ceil((usuario.bloqueado_ate - agora).total_seconds() / 60))
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "csrf_token": csrf_cookie,
+                "erro": f"Muitas tentativas. Tente novamente em {minutos} minutos.",
+            },
+        )
+
+    if usuario.bloqueado_ate is not None:
+        usuario.falhas_login = 0
+        usuario.bloqueado_ate = None
+
+    if not verificar_senha(usuario.senha_hash, senha):
+        usuario.falhas_login += 1
+        if usuario.falhas_login >= get_settings().login_max_falhas:
+            usuario.bloqueado_ate = agora + timedelta(
+                minutes=get_settings().login_bloqueio_minutos
+            )
+            db.commit()
+            minutos = get_settings().login_bloqueio_minutos
+            mensagem = f"Muitas tentativas. Tente novamente em {minutos} minutos."
+        else:
+            db.commit()
+            mensagem = ERRO_CREDENCIAIS
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"csrf_token": csrf_cookie, "erro": mensagem},
+        )
+
+    usuario.falhas_login = 0
+    usuario.bloqueado_ate = None
+    db.commit()
     _, token = criar_sessao(db, usuario)
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(
