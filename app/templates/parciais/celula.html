@@ -1,0 +1,41 @@
+{% set chave_data = dia.data.isoformat() %}
+{% set marcacoes_dia = marcacoes_por_data.get(dia.data, []) %}
+{% set classes = "calendario-dia" %}
+{% if not dia.pertence_ao_mes %}
+  {% set classes = classes + " calendario-dia-fora" %}
+{% elif dia.hoje %}
+  {% set classes = classes + " calendario-dia-hoje" %}
+{% elif dia.passado %}
+  {% set classes = classes + " calendario-dia-passado" %}
+{% endif %}
+{% set propria = marcacoes_dia|selectattr("usuario_id", "equalto", usuario_atual_id)|first|default(none) %}
+{% if propria is not none %}
+  {% set classes = classes + " calendario-dia-propria-" + propria.status.value %}
+{% endif %}
+{% if dia.pertence_ao_mes %}
+  <button id="celula-{{ chave_data }}" class="{{ classes }}" type="button"
+          role="gridcell" data-date="{{ chave_data }}" aria-haspopup="dialog"
+          hx-get="/dias/{{ chave_data }}" hx-target="#painel-host" hx-swap="innerHTML"
+          {% if oob_celula|default(false) %}hx-swap-oob="outerHTML"{% endif %}>
+    <span class="calendario-numero">{{ dia.numero }}</span>
+    <span class="calendario-marcacoes" aria-label="Marcações">
+      {% for marcacao in marcacoes_dia %}
+        <span class="marcacao-chip marcacao-{{ marcacao.status.value }} {% if marcacao.usuario_id == usuario_atual_id %}marcacao-propria{% endif %}">
+          {{ marcacao.apelido }}
+        </span>
+      {% endfor %}
+    </span>
+    {% set disponiveis = marcacoes_dia|selectattr("status.value", "equalto", "disponivel")|list|length %}
+    {% set indisponiveis = marcacoes_dia|selectattr("status.value", "equalto", "indisponivel")|list|length %}
+    {% if disponiveis or indisponiveis %}
+      <span class="calendario-contadores" aria-label="{{ disponiveis }} disponíveis e {{ indisponiveis }} indisponíveis">
+        {% if disponiveis %}<span>🟢 {{ disponiveis }}</span>{% endif %}
+        {% if indisponiveis %}<span>🔴 {{ indisponiveis }}</span>{% endif %}
+      </span>
+    {% endif %}
+  </button>
+{% else %}
+  <div class="{{ classes }}" role="gridcell" data-date="{{ chave_data }}" aria-disabled="true">
+    <span class="calendario-numero">{{ dia.numero }}</span>
+  </div>
+{% endif %}

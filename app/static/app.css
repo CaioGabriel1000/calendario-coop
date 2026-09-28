@@ -74,16 +74,167 @@
 }
 
 .calendario-dia {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   min-width: 0;
   min-height: 5rem;
   padding: 0.45rem;
   border: 1px solid var(--pico-muted-border-color);
   border-radius: var(--pico-border-radius);
+  margin: 0;
+  color: var(--pico-color);
+  text-align: left;
+  background: var(--pico-card-background-color);
+  font-size: inherit;
+  white-space: normal;
+}
+
+button.calendario-dia {
+  cursor: pointer;
+}
+
+button.calendario-dia:hover {
+  border-color: var(--pico-primary);
+  background: var(--pico-card-sectioning-background-color);
+}
+
+.calendario-numero {
+  flex: 0 0 auto;
+}
+
+.calendario-marcacoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+}
+
+.calendario-contadores {
+  display: none;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.marcacao-chip {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0.08rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: #102214;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marcacao-disponivel {
+  background: #c9efd2;
+  color: #174b27;
+}
+
+.marcacao-indisponivel {
+  background: #f5d1d1;
+  color: #6d1f1f;
+}
+
+.marcacao-chip.marcacao-propria {
+  border: 2px solid currentColor;
+  font-weight: 700;
+}
+
+.lista-marcacoes {
+  padding-left: 0;
+  list-style: none;
+}
+
+.lista-marcacoes li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding-block: 0.35rem;
+}
+
+.lista-marcacoes li.marcacao-propria {
+  font-weight: 700;
+}
+
+.acoes-marcacao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.acoes-marcacao form,
+.painel-dia-cabecalho form {
+  margin: 0;
+}
+
+.acoes-marcacao button,
+.painel-dia-cabecalho button {
+  margin: 0;
+}
+
+.botao-disponivel {
+  --pico-background-color: #247a3a;
+  --pico-border-color: #247a3a;
+}
+
+.botao-indisponivel {
+  --pico-background-color: #a73535;
+  --pico-border-color: #a73535;
+}
+
+.mensagem-erro {
+  color: #9d2525;
+  font-weight: 700;
+}
+
+.mensagem-vazia {
+  color: var(--pico-muted-color);
+}
+
+.painel-dia-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.painel-dia-cabecalho h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+}
+
+#painel-dia {
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pico-border-radius);
+  background: transparent;
+}
+
+#painel-dia article {
+  margin: 0;
 }
 
 .calendario-dia-hoje {
   outline: 2px solid var(--pico-primary);
   outline-offset: -2px;
+}
+
+.calendario-dia-propria-disponivel {
+  border-color: #247a3a;
+}
+
+.calendario-dia-propria-indisponivel {
+  border-color: #a73535;
 }
 
 .calendario-dia-passado {
@@ -117,5 +268,26 @@
   .calendario-dia {
     min-height: 3.2rem;
     padding: 0.3rem;
+  }
+
+  .marcacao-chip {
+    padding-inline: 0.22rem;
+    font-size: 0.62rem;
+  }
+
+  .calendario-marcacoes {
+    display: none;
+  }
+
+  .calendario-contadores {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  #painel-dia {
+    width: 100vw;
+    max-width: none;
+    max-height: 100dvh;
+    border-radius: 0;
   }
 }

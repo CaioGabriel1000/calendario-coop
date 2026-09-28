@@ -7,7 +7,8 @@
   {{ controle_hoje(mes, mes_atual, true) }}
 {% endif %}
 
-<div id="grade-container">
+<div id="grade-container" hx-get="/grade?mes={{ mes.chave }}" hx-trigger="every 30s"
+     hx-target="this" hx-swap="outerHTML">
   <div class="calendario-grade" role="grid" aria-label="{{ mes.titulo }}">
     <div class="calendario-cabecalho-semana" role="row">
       {% for dia_semana in dias_semana %}
@@ -17,18 +18,7 @@
     {% for semana in semanas %}
       <div class="calendario-semana" role="row">
         {% for dia in semana %}
-          {% set classes = "calendario-dia" %}
-          {% if not dia.pertence_ao_mes %}
-            {% set classes = classes + " calendario-dia-fora" %}
-          {% elif dia.hoje %}
-            {% set classes = classes + " calendario-dia-hoje" %}
-          {% elif dia.passado %}
-            {% set classes = classes + " calendario-dia-passado" %}
-          {% endif %}
-          <div class="{{ classes }}" role="gridcell" data-date="{{ dia.data.isoformat() }}"
-               {% if not dia.pertence_ao_mes %}aria-disabled="true"{% endif %}>
-            <span>{{ dia.numero }}</span>
-          </div>
+          {% include "parciais/celula.html" %}
         {% endfor %}
       </div>
     {% endfor %}

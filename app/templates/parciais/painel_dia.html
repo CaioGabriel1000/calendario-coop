@@ -1,0 +1,53 @@
+<dialog id="painel-dia" aria-labelledby="painel-titulo">
+  <article>
+    <header class="painel-dia-cabecalho">
+      <h2 id="painel-titulo">{{ data_extenso }}</h2>
+      <form method="dialog"><button class="outline secondary" aria-label="Fechar painel">Fechar</button></form>
+    </header>
+
+    {% if erro %}
+      <p class="mensagem-erro" role="alert">{{ erro }}</p>
+    {% endif %}
+
+    {% if marcacoes %}
+      <ul class="lista-marcacoes">
+        {% for marcacao in marcacoes %}
+          <li class="{% if marcacao.usuario_id == usuario_atual_id %}marcacao-propria{% endif %}">
+            <span class="marcacao-chip marcacao-{{ marcacao.status.value }} {% if marcacao.usuario_id == usuario_atual_id %}marcacao-propria{% endif %}">
+              {{ marcacao.apelido }}
+            </span>
+            <span>{{ "Disponível" if marcacao.status.value == "disponivel" else "Indisponível" }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="mensagem-vazia">Ninguém marcou este dia ainda.</p>
+    {% endif %}
+
+    {% if pode_editar %}
+      <section class="acoes-marcacao" aria-label="Sua disponibilidade">
+        {% set propria = marcacoes|selectattr("usuario_id", "equalto", usuario_atual_id)|first|default(none) %}
+        {% if propria is none or propria.status.value != "disponivel" %}
+          <form hx-put="/dias/{{ data.isoformat() }}/marcacao" hx-target="#painel-dia" hx-swap="outerHTML"
+                hx-headers='{"X-CSRF-Token":"{{ csrf_token }}"}'>
+            <input type="hidden" name="status" value="disponivel">
+            <button type="submit" class="botao-disponivel">Disponível</button>
+          </form>
+        {% endif %}
+        {% if propria is none or propria.status.value != "indisponivel" %}
+          <form hx-put="/dias/{{ data.isoformat() }}/marcacao" hx-target="#painel-dia" hx-swap="outerHTML"
+                hx-headers='{"X-CSRF-Token":"{{ csrf_token }}"}'>
+            <input type="hidden" name="status" value="indisponivel">
+            <button type="submit" class="botao-indisponivel">Indisponível</button>
+          </form>
+        {% endif %}
+        {% if propria is not none %}
+          <form hx-delete="/dias/{{ data.isoformat() }}/marcacao" hx-target="#painel-dia" hx-swap="outerHTML"
+                hx-headers='{"X-CSRF-Token":"{{ csrf_token }}"}'>
+            <button type="submit" class="outline">Remover marcação</button>
+          </form>
+        {% endif %}
+      </section>
+    {% endif %}
+  </article>
+</dialog>

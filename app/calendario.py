@@ -21,6 +21,15 @@ NOMES_MESES = (
     "Dezembro",
 )
 DIAS_SEMANA = ("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")
+DIAS_SEMANA_EXTENSO = (
+    "segunda-feira",
+    "terça-feira",
+    "quarta-feira",
+    "quinta-feira",
+    "sexta-feira",
+    "sábado",
+    "domingo",
+)
 PADRAO_MES = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
 
 
@@ -88,6 +97,12 @@ def normalizar_mes(
 def ultimo_dia_do_mes(mes: Mes) -> date:
     proximo = adicionar_meses(mes, 1)
     return date(proximo.ano, proximo.mes, 1) - timedelta(days=1)
+
+
+def data_por_extenso(data: date) -> str:
+    dia_semana = DIAS_SEMANA_EXTENSO[data.weekday()].capitalize()
+    nome_mes = NOMES_MESES[data.month - 1].lower()
+    return f"{dia_semana}, {data.day} de {nome_mes} de {data.year}"
 
 
 def dentro_da_janela_editavel(

@@ -1,12 +1,15 @@
 """Base declarativa e modelos do banco."""
 
-from datetime import datetime
+from datetime import date, datetime
+from enum import Enum as PyEnum
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CHAR,
+    Date,
     DateTime,
+    Enum,
     ForeignKey,
     Identity,
     Index,
@@ -22,6 +25,11 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
     pass
+
+
+class StatusMarcacao(str, PyEnum):
+    DISPONIVEL = "disponivel"
+    INDISPONIVEL = "indisponivel"
 
 
 class Usuario(Base):
@@ -66,3 +74,33 @@ class Sessao(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     expira_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class Marcacao(Base):
+    __tablename__ = "marcacoes"
+    __table_args__ = (
+        UniqueConstraint("usuario_id", "data", name="uq_marcacoes_usuario_data"),
+        Index("ix_marcacoes_data", "data"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("usuarios.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    data: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[StatusMarcacao] = mapped_column(
+        Enum(
+            StatusMarcacao,
+            name="status_marcacao",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+        ),
+        nullable=False,
+    )
+    criado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
