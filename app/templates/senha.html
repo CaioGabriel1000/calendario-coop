@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="pagina-senha">
+    <h1>Alterar senha</h1>
+    <p>Conta: {{ apelido }}</p>
+
+    {% if erro %}
+      <p class="mensagem-erro" role="alert">{{ erro }}</p>
+    {% endif %}
+    {% if sucesso %}
+      <p role="status">Senha alterada.</p>
+    {% endif %}
+
+    <form method="post" action="/senha">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="senha-atual">Senha atual</label>
+      <input id="senha-atual" name="senha_atual" type="password"
+             autocomplete="current-password" required>
+
+      <label for="nova-senha">Nova senha</label>
+      <input id="nova-senha" name="nova_senha" type="password"
+             autocomplete="new-password" minlength="8" required>
+
+      <label for="confirmar-senha">Confirmar nova senha</label>
+      <input id="confirmar-senha" name="confirmar_senha" type="password"
+             autocomplete="new-password" minlength="8" required>
+
+      <button type="submit">Salvar nova senha</button>
+    </form>
+
+    <a href="/">Voltar ao calendário</a>
+  </section>
+{% endblock %}

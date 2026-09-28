@@ -1,14 +1,18 @@
 """Operações de cadastro e consulta de usuários."""
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Usuario
-from app.senhas import gerar_hash
+from app.models import Sessao, Usuario
+from app.senhas import gerar_hash, verificar_senha
 
 TAMANHO_MINIMO_SENHA = 8
 TAMANHO_MAXIMO_APELIDO = 12
+
+
+class ErroAlteracaoSenha(ValueError):
+    """Indica uma validação que impediu a troca da senha."""
 
 
 class UsuarioDuplicadoError(ValueError):
@@ -73,3 +77,32 @@ def listar_usuarios(db: Session, *, incluir_desativados: bool = False) -> list[U
         consulta = consulta.where(Usuario.ativo.is_(True))
     consulta = consulta.order_by(func.lower(Usuario.apelido), Usuario.id)
     return list(db.scalars(consulta).all())
+
+
+def alterar_senha_usuario(
+    db: Session,
+    *,
+    usuario_id: int,
+    sessao_atual_id: int,
+    senha_atual: str,
+    nova_senha: str,
+    confirmacao: str,
+) -> None:
+    usuario = db.scalar(
+        select(Usuario).where(Usuario.id == usuario_id).with_for_update()
+    )
+    if usuario is None or not verificar_senha(usuario.senha_hash, senha_atual):
+        raise ErroAlteracaoSenha("A senha atual está incorreta.")
+    if len(nova_senha) < TAMANHO_MINIMO_SENHA:
+        raise ErroAlteracaoSenha("A nova senha deve ter no mínimo 8 caracteres.")
+    if nova_senha != confirmacao:
+        raise ErroAlteracaoSenha("A confirmação da nova senha não confere.")
+
+    usuario.senha_hash = gerar_hash(nova_senha)
+    db.execute(
+        delete(Sessao).where(
+            Sessao.usuario_id == usuario_id,
+            Sessao.id != sessao_atual_id,
+        )
+    )
+    db.commit()

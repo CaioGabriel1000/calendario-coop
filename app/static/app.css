@@ -276,8 +276,10 @@ button.calendario-dia:hover {
   }
 
   .calendario-usuario {
+    flex-wrap: wrap;
     gap: 0.5rem;
     margin-left: auto;
+    justify-content: flex-end;
   }
 
   .calendario-usuario > span {

@@ -13,6 +13,7 @@
       {{ controle_hoje(mes, mes_atual) }}
       <div class="calendario-usuario">
         <span>{{ apelido }}</span>
+        <a href="/senha">Alterar senha</a>
         <form method="post" action="/logout">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <button type="submit" class="outline">Sair</button>
