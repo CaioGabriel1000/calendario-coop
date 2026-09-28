@@ -1,0 +1,31 @@
+{% macro controle_anterior(mes, oob=false) -%}
+  <a id="controle-anterior" class="calendario-seta" href="/?mes={{ mes.chave }}"
+     hx-get="/grade?mes={{ mes.chave }}" hx-target="#grade-container"
+     hx-swap="outerHTML" hx-push-url="/?mes={{ mes.chave }}"
+     aria-label="Mês anterior"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>←</a>
+{%- endmacro %}
+
+{% macro controle_seguinte(mes, limite, oob=false) -%}
+  {% if mes <= limite %}
+    <a id="controle-seguinte" class="calendario-seta" href="/?mes={{ mes.chave }}"
+       hx-get="/grade?mes={{ mes.chave }}" hx-target="#grade-container"
+       hx-swap="outerHTML" hx-push-url="/?mes={{ mes.chave }}"
+       aria-label="Próximo mês"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>→</a>
+  {% else %}
+    <span id="controle-seguinte" class="calendario-seta calendario-seta-desabilitada"
+          aria-label="Limite de navegação atingido" aria-disabled="true"
+          {% if oob %}hx-swap-oob="outerHTML"{% endif %}>→</span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro controle_hoje(mes, mes_atual, oob=false) -%}
+  {% if mes != mes_atual %}
+    <a id="controle-hoje" class="outline" href="/"
+       hx-get="/grade?mes={{ mes_atual.chave }}" hx-target="#grade-container"
+       hx-swap="outerHTML" hx-push-url="/"
+       {% if oob %}hx-swap-oob="outerHTML"{% endif %}>Hoje</a>
+  {% else %}
+    <a id="controle-hoje" class="outline" href="/" aria-disabled="true" tabindex="-1"
+       hidden {% if oob %}hx-swap-oob="outerHTML"{% endif %}>Hoje</a>
+  {% endif %}
+{%- endmacro %}

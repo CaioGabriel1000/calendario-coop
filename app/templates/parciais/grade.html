@@ -1,0 +1,36 @@
+{% from "parciais/controles.html" import controle_anterior, controle_seguinte, controle_hoje %}
+
+{% if oob %}
+  {{ controle_anterior(mes_anterior, true) }}
+  <h1 id="mes-titulo" hx-swap-oob="innerHTML">{{ mes.titulo }}</h1>
+  {{ controle_seguinte(mes_seguinte, limite_navegacao, true) }}
+  {{ controle_hoje(mes, mes_atual, true) }}
+{% endif %}
+
+<div id="grade-container">
+  <div class="calendario-grade" role="grid" aria-label="{{ mes.titulo }}">
+    <div class="calendario-cabecalho-semana" role="row">
+      {% for dia_semana in dias_semana %}
+        <span role="columnheader">{{ dia_semana }}</span>
+      {% endfor %}
+    </div>
+    {% for semana in semanas %}
+      <div class="calendario-semana" role="row">
+        {% for dia in semana %}
+          {% set classes = "calendario-dia" %}
+          {% if not dia.pertence_ao_mes %}
+            {% set classes = classes + " calendario-dia-fora" %}
+          {% elif dia.hoje %}
+            {% set classes = classes + " calendario-dia-hoje" %}
+          {% elif dia.passado %}
+            {% set classes = classes + " calendario-dia-passado" %}
+          {% endif %}
+          <div class="{{ classes }}" role="gridcell" data-date="{{ dia.data.isoformat() }}"
+               {% if not dia.pertence_ao_mes %}aria-disabled="true"{% endif %}>
+            <span>{{ dia.numero }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+</div>

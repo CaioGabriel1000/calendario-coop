@@ -70,7 +70,8 @@ def test_login_correto_cria_sessao_e_mostra_apelido(client, db_session):
     assert "Max-Age=2592000" in response.headers["set-cookie"]
     pagina = client.get("/", follow_redirects=False)
     assert pagina.status_code == 200
-    assert "Olá, Ana" in pagina.text
+    assert "Ana" in pagina.text
+    assert 'id="grade-container"' in pagina.text
 
 
 def test_credenciais_invalidas_e_usuario_desativado_usam_mesmo_erro(client, db_session):

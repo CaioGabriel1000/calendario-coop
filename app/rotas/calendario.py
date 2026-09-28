@@ -1,4 +1,4 @@
-"""Página do calendário mensal."""
+"""Fragmentos HTMX da navegação do calendário."""
 
 from pathlib import Path
 
@@ -7,35 +7,16 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from app.auth import SessaoAutenticada, requer_sessao
-from app.calendario import (
-    DIAS_SEMANA,
-    Mes,
-    adicionar_meses,
-    mes_da_data,
-    montar_grade,
-    normalizar_mes,
-)
+from app.rotas.inicio import contexto_calendario
 from app.relogio import hoje
+from app.calendario import normalizar_mes
 
 router = APIRouter()
 templates = Jinja2Templates(directory=Path(__file__).resolve().parents[1] / "templates")
 
 
-def contexto_calendario(mes: Mes, data_hoje):
-    mes_atual = mes_da_data(data_hoje)
-    return {
-        "mes": mes,
-        "mes_anterior": adicionar_meses(mes, -1),
-        "mes_seguinte": adicionar_meses(mes, 1),
-        "mes_atual": mes_atual,
-        "limite_navegacao": adicionar_meses(mes_atual, 12),
-        "semanas": montar_grade(mes, data_hoje),
-        "dias_semana": DIAS_SEMANA,
-    }
-
-
-@router.get("/", response_class=HTMLResponse)
-def inicio(
+@router.get("/grade", response_class=HTMLResponse)
+def grade(
     request: Request,
     mes: str | None = Query(default=None),
     autenticacao: SessaoAutenticada = Depends(requer_sessao),
@@ -43,18 +24,17 @@ def inicio(
     data_hoje = hoje()
     mes_calendario, valido = normalizar_mes(mes, data_hoje)
     if not valido:
+        if request.headers.get("HX-Request", "").lower() == "true":
+            return HTMLResponse(
+                content="Mês inválido ou fora do limite de navegação.",
+                status_code=400,
+            )
         return RedirectResponse(url=f"/?mes={mes_calendario.chave}", status_code=303)
 
     contexto = contexto_calendario(mes_calendario, data_hoje)
-    contexto.update(
-        {
-            "request": request,
-            "apelido": autenticacao.usuario.apelido,
-            "csrf_token": autenticacao.sessao.csrf_token,
-        }
-    )
+    contexto.update({"request": request, "oob": True})
     return templates.TemplateResponse(
         request=request,
-        name="calendario.html",
+        name="parciais/grade.html",
         context=contexto,
     )

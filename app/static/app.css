@@ -1,0 +1,121 @@
+.calendario {
+  max-width: 76rem;
+  margin-inline: auto;
+}
+
+.calendario-navegacao {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 3rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 1.5rem 0.75rem;
+}
+
+.calendario-navegacao h1 {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.35rem, 4vw, 2rem);
+}
+
+.calendario-seta {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  color: var(--pico-color);
+  font-size: 1.5rem;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.calendario-seta-desabilitada {
+  opacity: 0.35;
+}
+
+.calendario-acoes,
+.calendario-usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.calendario-acoes {
+  justify-content: space-between;
+  min-height: 3rem;
+}
+
+.calendario-usuario form {
+  margin: 0;
+}
+
+.calendario-usuario button {
+  margin: 0;
+}
+
+.calendario-grade {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.75rem;
+}
+
+.calendario-cabecalho-semana,
+.calendario-semana {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.calendario-cabecalho-semana {
+  text-align: center;
+  font-weight: 700;
+}
+
+.calendario-dia {
+  min-width: 0;
+  min-height: 5rem;
+  padding: 0.45rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+}
+
+.calendario-dia-hoje {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: -2px;
+}
+
+.calendario-dia-passado {
+  opacity: 0.58;
+}
+
+.calendario-dia-fora {
+  opacity: 0.28;
+}
+
+@media (max-width: 767px) {
+  .calendario {
+    padding-inline: 0.25rem;
+  }
+
+  .calendario-navegacao {
+    grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
+    gap: 0.25rem;
+  }
+
+  .calendario-seta {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
+  .calendario-cabecalho-semana,
+  .calendario-semana {
+    gap: 0.15rem;
+  }
+
+  .calendario-dia {
+    min-height: 3.2rem;
+    padding: 0.3rem;
+  }
+}

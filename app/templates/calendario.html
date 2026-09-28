@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "parciais/controles.html" import controle_anterior, controle_seguinte, controle_hoje %}
+
+{% block content %}
+  <section class="calendario">
+    <nav class="calendario-navegacao" aria-label="Navegação entre meses">
+      {{ controle_anterior(mes_anterior) }}
+      <h1 id="mes-titulo">{{ mes.titulo }}</h1>
+      {{ controle_seguinte(mes_seguinte, limite_navegacao) }}
+    </nav>
+
+    <div class="calendario-acoes">
+      {{ controle_hoje(mes, mes_atual) }}
+      <div class="calendario-usuario">
+        <span>{{ apelido }}</span>
+        <form method="post" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="outline">Sair</button>
+        </form>
+      </div>
+    </div>
+
+    {% include "parciais/grade.html" %}
+  </section>
+{% endblock %}
