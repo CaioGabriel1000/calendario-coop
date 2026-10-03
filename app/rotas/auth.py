@@ -62,7 +62,7 @@ def login_page(
 @router.post("/login", response_class=HTMLResponse)
 def login(
     request: Request,
-    email: str = Form(...),
+    identificador: str = Form(...),
     senha: str = Form(...),
     csrf_token: str = Form(...),
     db: Session = Depends(get_db),
@@ -71,7 +71,7 @@ def login(
     if not csrf_cookie or not secrets.compare_digest(csrf_cookie, csrf_token):
         raise HTTPException(status_code=403, detail="Token CSRF inválido.")
 
-    identificador = email.strip()
+    identificador = identificador.strip()
     if "@" in identificador:
         filtro_identificador = Usuario.email == identificador.lower()
     else:

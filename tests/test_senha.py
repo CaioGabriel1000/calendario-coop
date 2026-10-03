@@ -136,7 +136,7 @@ def test_troca_mantem_sessao_atual_e_encerra_as_outras(
         login = outro_navegador.post(
             "/login",
             data={
-                "email": "senha@example.com",
+                "identificador": "senha@example.com",
                 "senha": "senha-nova-segura",
                 "csrf_token": token_csrf.group(1),
             },

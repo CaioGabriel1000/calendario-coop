@@ -8,13 +8,17 @@ from app.usuarios import criar_usuario
 from apoio import telefone_de_teste
 
 
-def fazer_login(client, *, email, senha):
+def fazer_login(client, *, identificador, senha):
     resposta = client.get("/login", follow_redirects=False)
     token = re.search(r'name="csrf_token" value="([^"]+)"', resposta.text)
     assert token is not None
     return client.post(
         "/login",
-        data={"email": email, "senha": senha, "csrf_token": token.group(1)},
+        data={
+            "identificador": identificador,
+            "senha": senha,
+            "csrf_token": token.group(1),
+        },
         follow_redirects=False,
     )
 
@@ -39,10 +43,17 @@ def test_bloqueia_na_quinta_falha_recusa_senha_correta_e_libera_depois(
     instante = [datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc)]
     monkeypatch.setattr("app.rotas.auth.agora_utc", lambda: instante[0])
 
-    for tentativa in range(5):
+    identificadores = [
+        "bloqueio@example.com",
+        usuario.telefone,
+        "bloqueio@example.com",
+        usuario.telefone,
+        "bloqueio@example.com",
+    ]
+    for tentativa, identificador in enumerate(identificadores):
         resposta = fazer_login(
             client,
-            email="bloqueio@example.com",
+            identificador=identificador,
             senha="senha-incorreta",
         )
         assert resposta.status_code == 200
@@ -60,7 +71,7 @@ def test_bloqueia_na_quinta_falha_recusa_senha_correta_e_libera_depois(
 
     bloqueado = fazer_login(
         client,
-        email="bloqueio@example.com",
+        identificador=usuario.telefone,
         senha="senha-segura",
     )
     assert bloqueado.status_code == 200
@@ -69,7 +80,7 @@ def test_bloqueia_na_quinta_falha_recusa_senha_correta_e_libera_depois(
     instante[0] += timedelta(minutes=15, seconds=1)
     liberado = fazer_login(
         client,
-        email="bloqueio@example.com",
+        identificador=usuario.telefone,
         senha="senha-segura",
     )
     assert liberado.status_code == 303
@@ -86,7 +97,7 @@ def test_login_bem_sucedido_zera_falhas_anteriores(client, db_session):
 
     resposta = fazer_login(
         client,
-        email="bloqueio@example.com",
+        identificador=usuario.telefone,
         senha="senha-segura",
     )
 
