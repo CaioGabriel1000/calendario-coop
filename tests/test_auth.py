@@ -53,6 +53,20 @@ def fazer_login(client, identificador="ana@example.com", senha="senha-segura"):
     )
 
 
+def test_tela_login_tem_um_identificador_e_nao_oferece_cadastro(client):
+    resposta = client.get("/login", follow_redirects=False)
+    cadastro = client.get("/cadastro", follow_redirects=False)
+
+    assert resposta.status_code == 200
+    assert 'label for="identificador">E-mail ou telefone</label>' in resposta.text
+    assert 'name="identificador" type="text"' in resposta.text
+    assert 'label for="senha">Senha</label>' in resposta.text
+    assert 'name="senha" type="password"' in resposta.text
+    assert ">Entrar</button>" in resposta.text
+    assert "cadastro" not in resposta.text.lower()
+    assert cadastro.status_code == 404
+
+
 def test_login_correto_cria_sessao_e_mostra_apelido(client, db_session):
     usuario = criar_usuario(
         db_session,
