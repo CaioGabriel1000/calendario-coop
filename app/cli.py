@@ -29,6 +29,15 @@ def obter_senha(senha: str | None) -> str:
     return senha
 
 
+def validar_identificador(email: str | None, telefone: str | None) -> None:
+    if (email is None) == (telefone is None):
+        typer.echo(
+            "Erro: informe exatamente um identificador: --email ou --telefone.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
 @app.command("create-user")
 def create_user(
     email: Annotated[str, typer.Option("--email", help="E-mail de acesso.")],
@@ -61,21 +70,31 @@ def create_user(
     finally:
         db.close()
 
-    typer.echo(f"Usuário {usuario.email} criado com sucesso.")
+    typer.echo(
+        f"Usuário {usuario.email} ({usuario.telefone.strip()}) criado com sucesso."
+    )
 
 
 @app.command("reset-password")
 def reset_password(
-    email: Annotated[str, typer.Option("--email", help="E-mail da conta.")],
+    email: Annotated[
+        str | None, typer.Option("--email", help="E-mail da conta.")
+    ] = None,
+    telefone: Annotated[
+        str | None, typer.Option("--telefone", help="Telefone da conta.")
+    ] = None,
     senha: Annotated[
         str | None,
         typer.Option("--senha", help="Nova senha (evite usar no shell)."),
     ] = None,
 ) -> None:
+    validar_identificador(email, telefone)
     senha = obter_senha(senha)
     db = SessionLocal()
     try:
-        usuario = resetar_senha_usuario(db, email=email, senha=senha)
+        usuario = resetar_senha_usuario(
+            db, email=email, telefone=telefone, senha=senha
+        )
     except ValueError as exc:
         typer.echo(f"Erro: {exc}", err=True)
         raise typer.Exit(code=1) from exc
@@ -89,7 +108,12 @@ def reset_password(
 
 @app.command("update-user")
 def update_user(
-    email: Annotated[str, typer.Option("--email", help="E-mail atual da conta.")],
+    email: Annotated[
+        str | None, typer.Option("--email", help="E-mail atual da conta.")
+    ] = None,
+    telefone: Annotated[
+        str | None, typer.Option("--telefone", help="Telefone atual da conta.")
+    ] = None,
     novo_email: Annotated[
         str | None,
         typer.Option("--novo-email", help="Novo e-mail de acesso."),
@@ -104,11 +128,13 @@ def update_user(
         typer.Option("--apelido", help="Novo apelido com até 12 caracteres."),
     ] = None,
 ) -> None:
+    validar_identificador(email, telefone)
     db = SessionLocal()
     try:
         usuario = atualizar_usuario(
             db,
             email=email,
+            telefone=telefone,
             novo_email=novo_email,
             novo_telefone=novo_telefone,
             nome=nome,
@@ -122,20 +148,31 @@ def update_user(
         raise typer.Exit(code=1) from exc
     finally:
         db.close()
-    typer.echo(f"Usuário {usuario.email} atualizado com sucesso.")
+    typer.echo(
+        f"Usuário {usuario.email} ({usuario.telefone.strip()}) atualizado com sucesso."
+    )
 
 
 @app.command("deactivate-user")
 def deactivate_user(
-    email: Annotated[str, typer.Option("--email", help="E-mail da conta.")],
+    email: Annotated[
+        str | None, typer.Option("--email", help="E-mail da conta.")
+    ] = None,
+    telefone: Annotated[
+        str | None, typer.Option("--telefone", help="Telefone da conta.")
+    ] = None,
 ) -> None:
-    if not typer.confirm(f"Confirma a desativação de {email}?"):
+    validar_identificador(email, telefone)
+    identificador = email or telefone or "usuário"
+    if not typer.confirm(f"Confirma a desativação de {identificador}?"):
         typer.echo("Operação cancelada.")
         return
 
     db = SessionLocal()
     try:
-        usuario = desativar_usuario(db, email=email, data_hoje=hoje())
+        usuario = desativar_usuario(
+            db, email=email, telefone=telefone, data_hoje=hoje()
+        )
     except ValueError as exc:
         typer.echo(f"Erro: {exc}", err=True)
         raise typer.Exit(code=1) from exc
@@ -149,11 +186,17 @@ def deactivate_user(
 
 @app.command("reactivate-user")
 def reactivate_user(
-    email: Annotated[str, typer.Option("--email", help="E-mail da conta.")],
+    email: Annotated[
+        str | None, typer.Option("--email", help="E-mail da conta.")
+    ] = None,
+    telefone: Annotated[
+        str | None, typer.Option("--telefone", help="Telefone da conta.")
+    ] = None,
 ) -> None:
+    validar_identificador(email, telefone)
     db = SessionLocal()
     try:
-        usuario = reativar_usuario(db, email=email)
+        usuario = reativar_usuario(db, email=email, telefone=telefone)
     except ValueError as exc:
         typer.echo(f"Erro: {exc}", err=True)
         raise typer.Exit(code=1) from exc
@@ -185,11 +228,11 @@ def list_users(
         typer.echo("Nenhum usuário encontrado.")
         return
 
-    typer.echo("E-mail | Nome | Apelido | Status | Criado em")
+    typer.echo("E-mail | Telefone | Nome | Apelido | Status | Criado em")
     for usuario in usuarios:
         status = "ativo" if usuario.ativo else "desativado"
         criado_em = usuario.criado_em.strftime("%d/%m/%Y %H:%M")
         typer.echo(
-            f"{usuario.email} | {usuario.nome} | {usuario.apelido} | "
-            f"{status} | {criado_em}"
+            f"{usuario.email} | {usuario.telefone.strip()} | {usuario.nome} | "
+            f"{usuario.apelido} | {status} | {criado_em}"
         )

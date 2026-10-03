@@ -95,6 +95,37 @@ def test_create_user_cli_persiste_telefone_normalizado(db_session, monkeypatch):
     assert usuario.telefone == "31999999999"
 
 
+def test_create_user_cli_exige_telefone():
+    resultado = runner.invoke(
+        cli_app,
+        [
+            "create-user",
+            "--email",
+            "sem-telefone@example.com",
+            "--nome",
+            "Pessoa Teste",
+            "--apelido",
+            "SemTelefone",
+            "--senha",
+            "senha-segura",
+        ],
+    )
+
+    assert resultado.exit_code != 0
+    assert "--telefone" in resultado.output
+
+
+def test_list_users_exibe_telefone(db_session, monkeypatch):
+    configurar_cli(monkeypatch, db_session)
+    usuario = criar(db_session, telefone="(31) 99999-9999")
+
+    resultado = runner.invoke(cli_app, ["list-users"])
+
+    assert resultado.exit_code == 0
+    assert "E-mail | Telefone" in resultado.output
+    assert f"{usuario.email} | 31999999999 |" in resultado.output
+
+
 def test_apelido_unico_sem_diferenciar_maiusculas_incluindo_desativado(db_session):
     usuario = criar(db_session)
     usuario.ativo = False
@@ -102,6 +133,20 @@ def test_apelido_unico_sem_diferenciar_maiusculas_incluindo_desativado(db_sessio
 
     with pytest.raises(UsuarioDuplicadoError, match="apelido"):
         criar(db_session, email="outra@example.com", apelido="aNA")
+
+
+def test_telefone_unico_incluindo_usuario_desativado(db_session):
+    usuario = criar(db_session, telefone="(31) 99999-9999")
+    usuario.ativo = False
+    db_session.flush()
+
+    with pytest.raises(UsuarioDuplicadoError, match="telefone"):
+        criar(
+            db_session,
+            email="outra@example.com",
+            telefone="31999999999",
+            apelido="Outra",
+        )
 
 
 def test_senha_com_menos_de_oito_caracteres_e_recusada(db_session):
@@ -135,8 +180,8 @@ def test_reset_password_limpa_bloqueio_e_encerra_sessoes(
         cli_app,
         [
             "reset-password",
-            "--email",
-            usuario.email,
+            "--telefone",
+            usuario.telefone,
             "--senha",
             "senha-redefinida",
         ],
@@ -160,7 +205,7 @@ def test_reset_password_limpa_bloqueio_e_encerra_sessoes(
 def test_update_user_normaliza_e_respeita_unicidade(db_session, monkeypatch):
     configurar_cli(monkeypatch, db_session)
     alvo = criar(db_session)
-    criar(
+    bia = criar(
         db_session,
         email="bia@example.com",
         nome="Bia",
@@ -203,6 +248,36 @@ def test_update_user_normaliza_e_respeita_unicidade(db_session, monkeypatch):
             "bIA",
         ],
     )
+    telefone_duplicado = runner.invoke(
+        cli_app,
+        [
+            "update-user",
+            "--telefone",
+            alvo.telefone,
+            "--novo-telefone",
+            bia.telefone,
+        ],
+    )
+    email_vazio = runner.invoke(
+        cli_app,
+        [
+            "update-user",
+            "--email",
+            "ana.nova@example.com",
+            "--novo-email",
+            " ",
+        ],
+    )
+    telefone_vazio = runner.invoke(
+        cli_app,
+        [
+            "update-user",
+            "--email",
+            "ana.nova@example.com",
+            "--novo-telefone",
+            "",
+        ],
+    )
 
     assert atualizado.exit_code == 0
     assert "ana.nova@example.com" in atualizado.output
@@ -210,6 +285,11 @@ def test_update_user_normaliza_e_respeita_unicidade(db_session, monkeypatch):
     assert "Este e-mail já está cadastrado." in email_duplicado.output
     assert apelido_duplicado.exit_code == 1
     assert "Este apelido já está cadastrado." in apelido_duplicado.output
+    assert telefone_duplicado.exit_code == 1
+    assert "Este telefone já está cadastrado." in telefone_duplicado.output
+    assert email_vazio.exit_code == 1
+    assert "e-mail não pode ficar vazio" in email_vazio.output
+    assert telefone_vazio.exit_code == 1
     db_session.expire_all()
     alvo = db_session.scalar(select(Usuario).where(Usuario.id == alvo.id))
     assert alvo is not None
@@ -269,7 +349,7 @@ def test_desativacao_preserva_historico_e_reativacao_nao_restaura_futuro(
 
     cancelado = runner.invoke(
         cli_app,
-        ["deactivate-user", "--email", alvo.email],
+        ["deactivate-user", "--telefone", alvo.telefone],
         input="n\n",
     )
     assert cancelado.exit_code == 0
@@ -278,7 +358,7 @@ def test_desativacao_preserva_historico_e_reativacao_nao_restaura_futuro(
 
     desativado = runner.invoke(
         cli_app,
-        ["deactivate-user", "--email", alvo.email],
+        ["deactivate-user", "--telefone", alvo.telefone],
         input="y\n",
     )
     assert desativado.exit_code == 0
@@ -308,7 +388,7 @@ def test_desativacao_preserva_historico_e_reativacao_nao_restaura_futuro(
 
     reativado = runner.invoke(
         cli_app,
-        ["reactivate-user", "--email", alvo.email],
+        ["reactivate-user", "--telefone", alvo.telefone],
     )
     assert reativado.exit_code == 0
     db_session.expire_all()

@@ -23,7 +23,27 @@ class UsuarioDuplicadoError(ValueError):
 
 
 class UsuarioNaoEncontradoError(ValueError):
-    """Indica que não existe usuário com o e-mail informado."""
+    """Indica que não existe usuário com o identificador informado."""
+
+
+def _buscar_usuario(
+    db: Session,
+    *,
+    email: str | None,
+    telefone: str | None,
+) -> Usuario | None:
+    if (email is None) == (telefone is None):
+        raise ValueError("Informe exatamente um identificador: e-mail ou telefone.")
+
+    if email is not None:
+        identificador = email.strip().lower()
+        if not identificador:
+            raise ValueError("O e-mail não pode ficar vazio.")
+        filtro = Usuario.email == identificador
+    else:
+        filtro = Usuario.telefone == normalizar_telefone(telefone)
+
+    return db.scalar(select(Usuario).where(filtro).with_for_update())
 
 
 def criar_usuario(
@@ -35,6 +55,8 @@ def criar_usuario(
     apelido: str,
     senha: str,
 ) -> Usuario:
+    if not email.strip():
+        raise ValueError("O e-mail é obrigatório.")
     email_normalizado = email.strip().lower()
     telefone_normalizado = normalizar_telefone(telefone)
     nome_normalizado = nome.strip()
@@ -123,14 +145,16 @@ def alterar_senha_usuario(
     db.commit()
 
 
-def resetar_senha_usuario(db: Session, *, email: str, senha: str) -> Usuario:
+def resetar_senha_usuario(
+    db: Session,
+    *,
+    senha: str,
+    email: str | None = None,
+    telefone: str | None = None,
+) -> Usuario:
     if len(senha) < TAMANHO_MINIMO_SENHA:
         raise ValueError("A senha deve ter no mínimo 8 caracteres.")
-    usuario = db.scalar(
-        select(Usuario)
-        .where(Usuario.email == email.strip().lower())
-        .with_for_update()
-    )
+    usuario = _buscar_usuario(db, email=email, telefone=telefone)
     if usuario is None:
         raise UsuarioNaoEncontradoError("Usuário não encontrado.")
 
@@ -147,7 +171,8 @@ def resetar_senha_usuario(db: Session, *, email: str, senha: str) -> Usuario:
 def atualizar_usuario(
     db: Session,
     *,
-    email: str,
+    email: str | None = None,
+    telefone: str | None = None,
     novo_email: str | None = None,
     novo_telefone: str | None = None,
     nome: str | None = None,
@@ -156,10 +181,7 @@ def atualizar_usuario(
     if novo_email is None and novo_telefone is None and nome is None and apelido is None:
         raise ValueError("Informe ao menos um campo para atualizar.")
 
-    email_atual = email.strip().lower()
-    usuario = db.scalar(
-        select(Usuario).where(Usuario.email == email_atual).with_for_update()
-    )
+    usuario = _buscar_usuario(db, email=email, telefone=telefone)
     if usuario is None:
         raise UsuarioNaoEncontradoError("Usuário não encontrado.")
 
@@ -227,12 +249,14 @@ def atualizar_usuario(
     return usuario
 
 
-def desativar_usuario(db: Session, *, email: str, data_hoje: date) -> Usuario:
-    usuario = db.scalar(
-        select(Usuario)
-        .where(Usuario.email == email.strip().lower())
-        .with_for_update()
-    )
+def desativar_usuario(
+    db: Session,
+    *,
+    data_hoje: date,
+    email: str | None = None,
+    telefone: str | None = None,
+) -> Usuario:
+    usuario = _buscar_usuario(db, email=email, telefone=telefone)
     if usuario is None:
         raise UsuarioNaoEncontradoError("Usuário não encontrado.")
 
@@ -250,12 +274,13 @@ def desativar_usuario(db: Session, *, email: str, data_hoje: date) -> Usuario:
     return usuario
 
 
-def reativar_usuario(db: Session, *, email: str) -> Usuario:
-    usuario = db.scalar(
-        select(Usuario)
-        .where(Usuario.email == email.strip().lower())
-        .with_for_update()
-    )
+def reativar_usuario(
+    db: Session,
+    *,
+    email: str | None = None,
+    telefone: str | None = None,
+) -> Usuario:
+    usuario = _buscar_usuario(db, email=email, telefone=telefone)
     if usuario is None:
         raise UsuarioNaoEncontradoError("Usuário não encontrado.")
     usuario.ativo = True
