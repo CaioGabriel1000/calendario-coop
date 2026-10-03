@@ -125,6 +125,11 @@ def test_credenciais_invalidas_e_usuario_desativado_usam_mesmo_erro(client, db_s
     )
 
     senha_errada = fazer_login(client, senha="incorreta")
+    telefone_senha_errada = fazer_login(
+        client,
+        identificador=telefone_de_teste("ana@example.com"),
+        senha="incorreta",
+    )
     usuario_inativo = fazer_login(
         client,
         identificador="desativada@example.com",
@@ -142,10 +147,12 @@ def test_credenciais_invalidas_e_usuario_desativado_usam_mesmo_erro(client, db_s
     )
 
     assert senha_errada.status_code == 200
+    assert telefone_senha_errada.status_code == 200
     assert usuario_inativo.status_code == 200
     assert telefone_inativo.status_code == 200
     assert usuario_desconhecido.status_code == 200
     assert "E-mail, telefone ou senha inválidos." in senha_errada.text
+    assert "E-mail, telefone ou senha inválidos." in telefone_senha_errada.text
     assert "E-mail, telefone ou senha inválidos." in usuario_inativo.text
     assert "E-mail, telefone ou senha inválidos." in telefone_inativo.text
     assert "E-mail, telefone ou senha inválidos." in usuario_desconhecido.text

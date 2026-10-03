@@ -115,6 +115,55 @@ def test_create_user_cli_exige_telefone():
     assert "--telefone" in resultado.output
 
 
+def test_create_user_cli_rejeita_telefone_invalido_e_duplicado(
+    db_session, monkeypatch
+):
+    configurar_cli(monkeypatch, db_session)
+    existente = criar(db_session)
+
+    argumentos_base = [
+        "create-user",
+        "--email",
+        "novo@example.com",
+        "--nome",
+        "Pessoa Teste",
+        "--apelido",
+        "Novo",
+        "--senha",
+        "senha-segura",
+    ]
+    invalido = runner.invoke(
+        cli_app,
+        [*argumentos_base, "--telefone", "31 9999-9999"],
+    )
+    duplicado = runner.invoke(
+        cli_app,
+        [*argumentos_base, "--telefone", existente.telefone],
+    )
+
+    assert invalido.exit_code == 1
+    assert "Erro:" in invalido.output
+    assert "telefone" in invalido.output.lower()
+    assert duplicado.exit_code == 1
+    assert "Este telefone já está cadastrado." in duplicado.output
+
+
+@pytest.mark.parametrize(
+    "argumentos",
+    [
+        ["reset-password", "--email", "ana@example.com", "--telefone", "31999999999", "--senha", "senha-segura"],
+        ["update-user", "--apelido", "Novo"],
+        ["deactivate-user"],
+        ["reactivate-user", "--email", "ana@example.com", "--telefone", "31999999999"],
+    ],
+)
+def test_comandos_de_manutencao_exigem_um_identificador(argumentos):
+    resultado = runner.invoke(cli_app, argumentos)
+
+    assert resultado.exit_code == 1
+    assert "informe exatamente um identificador" in resultado.output.lower()
+
+
 def test_list_users_exibe_telefone(db_session, monkeypatch):
     configurar_cli(monkeypatch, db_session)
     usuario = criar(db_session, telefone="(31) 99999-9999")
@@ -252,8 +301,8 @@ def test_update_user_normaliza_e_respeita_unicidade(db_session, monkeypatch):
         cli_app,
         [
             "update-user",
-            "--telefone",
-            alvo.telefone,
+            "--email",
+            "ana.nova@example.com",
             "--novo-telefone",
             bia.telefone,
         ],
