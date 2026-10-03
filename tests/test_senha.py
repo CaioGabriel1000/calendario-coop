@@ -8,11 +8,13 @@ from sqlalchemy import select
 from app.auth import hash_token
 from app.models import Sessao, Usuario
 from app.senhas import gerar_hash, verificar_senha
+from apoio import telefone_de_teste
 
 
 def criar_usuario_com_sessoes(db_session, quantidade=1):
     usuario = Usuario(
         email="senha@example.com",
+        telefone=telefone_de_teste("senha@example.com"),
         nome="Pessoa Teste",
         apelido="Senha",
         senha_hash=gerar_hash("senha-antiga"),

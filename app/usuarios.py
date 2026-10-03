@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Marcacao, Sessao, Usuario
 from app.senhas import gerar_hash, verificar_senha
+from app.telefones import normalizar_telefone
 
 TAMANHO_MINIMO_SENHA = 8
 TAMANHO_MAXIMO_APELIDO = 12
@@ -18,7 +19,7 @@ class ErroAlteracaoSenha(ValueError):
 
 
 class UsuarioDuplicadoError(ValueError):
-    """Indica que e-mail ou apelido já está cadastrado."""
+    """Indica que e-mail, telefone ou apelido já está cadastrado."""
 
 
 class UsuarioNaoEncontradoError(ValueError):
@@ -29,11 +30,13 @@ def criar_usuario(
     db: Session,
     *,
     email: str,
+    telefone: str,
     nome: str,
     apelido: str,
     senha: str,
 ) -> Usuario:
     email_normalizado = email.strip().lower()
+    telefone_normalizado = normalizar_telefone(telefone)
     nome_normalizado = nome.strip()
     apelido_normalizado = apelido.strip()
 
@@ -50,6 +53,8 @@ def criar_usuario(
 
     if db.scalar(select(Usuario.id).where(Usuario.email == email_normalizado)):
         raise UsuarioDuplicadoError("Este e-mail já está cadastrado.")
+    if db.scalar(select(Usuario.id).where(Usuario.telefone == telefone_normalizado)):
+        raise UsuarioDuplicadoError("Este telefone já está cadastrado.")
     if db.scalar(
         select(Usuario.id).where(func.lower(Usuario.apelido) == apelido_normalizado.lower())
     ):
@@ -57,6 +62,7 @@ def criar_usuario(
 
     usuario = Usuario(
         email=email_normalizado,
+        telefone=telefone_normalizado,
         nome=nome_normalizado,
         apelido=apelido_normalizado,
         senha_hash=gerar_hash(senha),
@@ -69,9 +75,11 @@ def criar_usuario(
         constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
         if constraint == "uq_usuarios_email":
             raise UsuarioDuplicadoError("Este e-mail já está cadastrado.") from exc
+        if constraint == "uq_usuarios_telefone":
+            raise UsuarioDuplicadoError("Este telefone já está cadastrado.") from exc
         if constraint == "uq_usuarios_apelido_lower":
             raise UsuarioDuplicadoError("Este apelido já está cadastrado.") from exc
-        raise UsuarioDuplicadoError("E-mail ou apelido já cadastrado.") from exc
+        raise UsuarioDuplicadoError("E-mail, telefone ou apelido já cadastrado.") from exc
 
     db.refresh(usuario)
     return usuario
@@ -141,10 +149,11 @@ def atualizar_usuario(
     *,
     email: str,
     novo_email: str | None = None,
+    novo_telefone: str | None = None,
     nome: str | None = None,
     apelido: str | None = None,
 ) -> Usuario:
-    if novo_email is None and nome is None and apelido is None:
+    if novo_email is None and novo_telefone is None and nome is None and apelido is None:
         raise ValueError("Informe ao menos um campo para atualizar.")
 
     email_atual = email.strip().lower()
@@ -155,6 +164,9 @@ def atualizar_usuario(
         raise UsuarioNaoEncontradoError("Usuário não encontrado.")
 
     email_atualizado = novo_email.strip().lower() if novo_email is not None else None
+    telefone_atualizado = (
+        normalizar_telefone(novo_telefone) if novo_telefone is not None else None
+    )
     nome_atualizado = nome.strip() if nome is not None else None
     apelido_atualizado = apelido.strip() if apelido is not None else None
 
@@ -175,6 +187,13 @@ def atualizar_usuario(
         )
     ):
         raise UsuarioDuplicadoError("Este e-mail já está cadastrado.")
+    if telefone_atualizado is not None and db.scalar(
+        select(Usuario.id).where(
+            Usuario.telefone == telefone_atualizado,
+            Usuario.id != usuario.id,
+        )
+    ):
+        raise UsuarioDuplicadoError("Este telefone já está cadastrado.")
     if apelido_atualizado is not None and db.scalar(
         select(Usuario.id).where(
             func.lower(Usuario.apelido) == apelido_atualizado.lower(),
@@ -185,6 +204,8 @@ def atualizar_usuario(
 
     if email_atualizado is not None:
         usuario.email = email_atualizado
+    if telefone_atualizado is not None:
+        usuario.telefone = telefone_atualizado
     if nome_atualizado is not None:
         usuario.nome = nome_atualizado
     if apelido_atualizado is not None:
@@ -197,9 +218,11 @@ def atualizar_usuario(
         constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
         if constraint == "uq_usuarios_email":
             raise UsuarioDuplicadoError("Este e-mail já está cadastrado.") from exc
+        if constraint == "uq_usuarios_telefone":
+            raise UsuarioDuplicadoError("Este telefone já está cadastrado.") from exc
         if constraint == "uq_usuarios_apelido_lower":
             raise UsuarioDuplicadoError("Este apelido já está cadastrado.") from exc
-        raise UsuarioDuplicadoError("E-mail ou apelido já cadastrado.") from exc
+        raise UsuarioDuplicadoError("E-mail, telefone ou apelido já cadastrado.") from exc
     db.refresh(usuario)
     return usuario
 

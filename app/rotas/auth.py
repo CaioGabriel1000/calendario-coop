@@ -24,10 +24,11 @@ from app.db import get_db
 from app.models import Usuario
 from app.relogio import agora_utc
 from app.senhas import verificar_senha
+from app.telefones import normalizar_telefone
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
-ERRO_CREDENCIAIS = "E-mail ou senha inválidos."
+ERRO_CREDENCIAIS = "E-mail, telefone ou senha inválidos."
 IDADE_COOKIE_PRE_SESSAO = 600
 
 
@@ -70,11 +71,25 @@ def login(
     if not csrf_cookie or not secrets.compare_digest(csrf_cookie, csrf_token):
         raise HTTPException(status_code=403, detail="Token CSRF inválido.")
 
+    identificador = email.strip()
+    if "@" in identificador:
+        filtro_identificador = Usuario.email == identificador.lower()
+    else:
+        try:
+            telefone = normalizar_telefone(identificador)
+        except ValueError:
+            response = templates.TemplateResponse(
+                request=request,
+                name="login.html",
+                context={"csrf_token": csrf_cookie, "erro": ERRO_CREDENCIAIS},
+            )
+            response.status_code = 200
+            return response
+        filtro_identificador = Usuario.telefone == telefone
+
     remover_sessoes_expiradas(db)
     usuario = db.scalar(
-        select(Usuario)
-        .where(Usuario.email == email.strip().lower())
-        .with_for_update()
+        select(Usuario).where(filtro_identificador).with_for_update()
     )
     if usuario is None or not usuario.ativo:
         response = templates.TemplateResponse(

@@ -12,6 +12,7 @@ from app.main import app as web_app
 from app.models import Marcacao, Sessao, StatusMarcacao, Usuario
 from app.senhas import verificar_senha
 from app.usuarios import UsuarioDuplicadoError, criar_usuario
+from apoio import telefone_de_teste
 
 runner = CliRunner()
 
@@ -30,6 +31,7 @@ def criar(
     db_session,
     *,
     email="ana@example.com",
+    telefone=None,
     nome="Ana Souza",
     apelido="Ana",
     senha="senha-segura",
@@ -37,6 +39,7 @@ def criar(
     return criar_usuario(
         db_session,
         email=email,
+        telefone=telefone or telefone_de_teste(email),
         nome=nome,
         apelido=apelido,
         senha=senha,
@@ -49,6 +52,47 @@ def test_email_unico_sem_diferenciar_maiusculas(db_session):
     assert usuario.email == "ana@example.com"
     with pytest.raises(UsuarioDuplicadoError, match="e-mail"):
         criar(db_session, email="ANA@EXAMPLE.COM", apelido="Outra")
+
+
+def test_cadastro_normaliza_telefone_antes_de_salvar(db_session):
+    usuario = criar(db_session, telefone="(31) 99999-9999")
+
+    assert usuario.telefone == "31999999999"
+
+
+def test_cadastro_rejeita_telefone_invalido(db_session):
+    with pytest.raises(ValueError, match="telefone"):
+        criar(db_session, telefone="31 9999-9999")
+
+    assert db_session.query(Usuario).count() == 0
+
+
+def test_create_user_cli_persiste_telefone_normalizado(db_session, monkeypatch):
+    configurar_cli(monkeypatch, db_session)
+
+    resultado = runner.invoke(
+        cli_app,
+        [
+            "create-user",
+            "--email",
+            "telefone@example.com",
+            "--telefone",
+            "(31) 99999-9999",
+            "--nome",
+            "Pessoa Teste",
+            "--apelido",
+            "Telefone",
+            "--senha",
+            "senha-segura",
+        ],
+    )
+
+    assert resultado.exit_code == 0
+    usuario = db_session.scalar(
+        select(Usuario).where(Usuario.email == "telefone@example.com")
+    )
+    assert usuario is not None
+    assert usuario.telefone == "31999999999"
 
 
 def test_apelido_unico_sem_diferenciar_maiusculas_incluindo_desativado(db_session):
@@ -129,6 +173,8 @@ def test_update_user_normaliza_e_respeita_unicidade(db_session, monkeypatch):
             "update-user",
             "--email",
             alvo.email,
+            "--novo-telefone",
+            "(31) 99999-9999",
             "--novo-email",
             " ANA.NOVA@EXAMPLE.COM ",
             "--nome",
@@ -168,6 +214,7 @@ def test_update_user_normaliza_e_respeita_unicidade(db_session, monkeypatch):
     alvo = db_session.scalar(select(Usuario).where(Usuario.id == alvo.id))
     assert alvo is not None
     assert alvo.email == "ana.nova@example.com"
+    assert alvo.telefone == "31999999999"
     assert alvo.nome == "Ana Atualizada"
     assert alvo.apelido == "Aninha"
 

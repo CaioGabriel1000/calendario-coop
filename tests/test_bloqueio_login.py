@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.models import Usuario
 from app.usuarios import criar_usuario
+from apoio import telefone_de_teste
 
 
 def fazer_login(client, *, email, senha):
@@ -22,6 +23,7 @@ def preparar_usuario(db_session):
     return criar_usuario(
         db_session,
         email="bloqueio@example.com",
+        telefone=telefone_de_teste("bloqueio@example.com"),
         nome="Pessoa Teste",
         apelido="Bloqueio",
         senha="senha-segura",
@@ -45,7 +47,7 @@ def test_bloqueia_na_quinta_falha_recusa_senha_correta_e_libera_depois(
         )
         assert resposta.status_code == 200
         if tentativa < 4:
-            assert "E-mail ou senha inválidos." in resposta.text
+            assert "E-mail, telefone ou senha inválidos." in resposta.text
         else:
             assert "Muitas tentativas. Tente novamente em 15 minutos." in resposta.text
 

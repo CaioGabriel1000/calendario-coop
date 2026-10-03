@@ -7,18 +7,21 @@ from app.auth import hash_token
 from app.models import Sessao, Usuario
 from app.senhas import gerar_hash
 from app.usuarios import criar_usuario
+from apoio import telefone_de_teste
 
 
 def preparar_usuario(
     db_session,
     *,
     email="ana@example.com",
+    telefone=None,
     apelido="Ana",
     senha="senha-segura",
     ativo=True,
 ):
     usuario = Usuario(
         email=email,
+        telefone=telefone or telefone_de_teste(email),
         nome="Ana Souza",
         apelido=apelido,
         senha_hash=gerar_hash(senha),
@@ -50,6 +53,7 @@ def test_login_correto_cria_sessao_e_mostra_apelido(client, db_session):
     criar_usuario(
         db_session,
         email="ana@example.com",
+        telefone=telefone_de_teste("ana@example.com"),
         nome="Ana Souza",
         apelido="Ana",
         senha="senha-segura",
@@ -72,6 +76,15 @@ def test_login_correto_cria_sessao_e_mostra_apelido(client, db_session):
     assert pagina.status_code == 200
     assert "Ana" in pagina.text
     assert 'id="grade-container"' in pagina.text
+
+
+def test_login_aceita_telefone_com_mascara(client, db_session):
+    preparar_usuario(db_session, telefone="31999999999")
+
+    response = fazer_login(client, email="(31) 99999-9999")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
 
 
 def test_credenciais_invalidas_e_usuario_desativado_usam_mesmo_erro(client, db_session):
@@ -98,9 +111,9 @@ def test_credenciais_invalidas_e_usuario_desativado_usam_mesmo_erro(client, db_s
     assert senha_errada.status_code == 200
     assert usuario_inativo.status_code == 200
     assert usuario_desconhecido.status_code == 200
-    assert "E-mail ou senha inválidos." in senha_errada.text
-    assert "E-mail ou senha inválidos." in usuario_inativo.text
-    assert "E-mail ou senha inválidos." in usuario_desconhecido.text
+    assert "E-mail, telefone ou senha inválidos." in senha_errada.text
+    assert "E-mail, telefone ou senha inválidos." in usuario_inativo.text
+    assert "E-mail, telefone ou senha inválidos." in usuario_desconhecido.text
 
 
 def test_usuario_sem_sessao_e_redirecionado_para_login(client):

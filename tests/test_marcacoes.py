@@ -9,6 +9,7 @@ from app.main import app
 from app.marcacoes import registrar_marcacao
 from app.models import Marcacao, Sessao, StatusMarcacao, Usuario
 from app.senhas import gerar_hash
+from apoio import telefone_de_teste
 
 HOJE_TESTE = date(2026, 9, 28)
 
@@ -16,6 +17,7 @@ HOJE_TESTE = date(2026, 9, 28)
 def criar_usuario_e_sessao(db_session, *, email, apelido):
     usuario = Usuario(
         email=email,
+        telefone=telefone_de_teste(email),
         nome=apelido,
         apelido=apelido,
         senha_hash=gerar_hash("senha-segura"),

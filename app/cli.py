@@ -32,6 +32,7 @@ def obter_senha(senha: str | None) -> str:
 @app.command("create-user")
 def create_user(
     email: Annotated[str, typer.Option("--email", help="E-mail de acesso.")],
+    telefone: Annotated[str, typer.Option("--telefone", help="Telefone com DDD.")],
     nome: Annotated[str, typer.Option("--nome", help="Nome completo.")],
     apelido: Annotated[str, typer.Option("--apelido", help="Apelido com até 12 caracteres.")],
     senha: Annotated[
@@ -46,6 +47,7 @@ def create_user(
         usuario = criar_usuario(
             db,
             email=email,
+            telefone=telefone,
             nome=nome,
             apelido=apelido,
             senha=senha,
@@ -92,6 +94,10 @@ def update_user(
         str | None,
         typer.Option("--novo-email", help="Novo e-mail de acesso."),
     ] = None,
+    novo_telefone: Annotated[
+        str | None,
+        typer.Option("--novo-telefone", help="Novo telefone com DDD."),
+    ] = None,
     nome: Annotated[str | None, typer.Option("--nome", help="Novo nome.")] = None,
     apelido: Annotated[
         str | None,
@@ -104,6 +110,7 @@ def update_user(
             db,
             email=email,
             novo_email=novo_email,
+            novo_telefone=novo_telefone,
             nome=nome,
             apelido=apelido,
         )
