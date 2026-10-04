@@ -43,8 +43,15 @@ O Caddy solicita e renova o certificado TLS automaticamente. A app executa `alem
 Crie o primeiro usuário. O comando pedirá a senha em prompt oculto:
 
 ```bash
-docker compose exec app calendario create-user --email ana@exemplo.com --nome "Ana Souza" --apelido Ana
+docker compose exec app calendario create-user \
+  --email ana@exemplo.com \
+  --telefone 31999999999 \
+  --nome "Ana Souza" \
+  --apelido Ana
 ```
+
+Na tela `/login`, a pessoa pode entrar usando o e-mail ou o telefone brasileiro
+(DDD com dois dígitos e telefone com nove dígitos), junto com a senha.
 
 ## Atualizar somente a aplicação
 
@@ -70,11 +77,15 @@ Guarde os arquivos de backup fora do servidor e teste periodicamente a restaura�
 
 ```bash
 docker compose exec app calendario list-users
-docker compose exec app calendario reset-password --email ana@exemplo.com
-docker compose exec app calendario update-user --email ana@exemplo.com --apelido Ana
-docker compose exec app calendario deactivate-user --email ana@exemplo.com
-docker compose exec app calendario reactivate-user --email ana@exemplo.com
+docker compose exec app calendario reset-password --telefone 31999999999
+docker compose exec app calendario update-user --email ana@exemplo.com --novo-telefone 31988888888
+docker compose exec app calendario deactivate-user --telefone 31988888888
+docker compose exec app calendario reactivate-user --telefone 31988888888
 ```
+
+`create-user` exige `--email` e `--telefone`. Nos comandos de manutenção,
+informe exatamente um identificador: `--email` ou `--telefone`. Telefones são
+normalizados para 11 dígitos antes de serem armazenados ou consultados.
 
 ## Testes
 

@@ -14,6 +14,7 @@ from app.calendario import (
 )
 from app.models import Sessao, Usuario
 from app.senhas import gerar_hash
+from apoio import telefone_de_teste
 
 
 @pytest.mark.parametrize(
@@ -81,6 +82,7 @@ def test_janela_editavel_termina_no_fim_do_mes_atual_mais_12():
 def autenticar(client, db_session):
     usuario = Usuario(
         email="calendario@example.com",
+        telefone=telefone_de_teste("calendario@example.com"),
         nome="Usuária Teste",
         apelido="Calendario",
         senha_hash=gerar_hash("senha-segura"),

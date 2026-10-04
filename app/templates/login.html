@@ -7,8 +7,8 @@
   {% endif %}
   <form method="post" action="/login">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label for="email">E-mail</label>
-    <input id="email" name="email" type="email" autocomplete="username" required>
+    <label for="identificador">E-mail ou telefone</label>
+    <input id="identificador" name="identificador" type="text" autocomplete="username" required>
     <label for="senha">Senha</label>
     <input id="senha" name="senha" type="password" autocomplete="current-password" required>
     <button type="submit">Entrar</button>

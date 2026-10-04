@@ -7,6 +7,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CHAR,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -36,11 +37,16 @@ class Usuario(Base):
     __tablename__ = "usuarios"
     __table_args__ = (
         UniqueConstraint("email", name="uq_usuarios_email"),
+        UniqueConstraint("telefone", name="uq_usuarios_telefone"),
+        CheckConstraint(
+            "telefone ~ '^[0-9]{11}$'", name="ck_usuarios_telefone_formato"
+        ),
         Index("uq_usuarios_apelido_lower", func.lower(text("apelido")), unique=True),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     email: Mapped[str] = mapped_column(Text, nullable=False)
+    telefone: Mapped[str] = mapped_column(CHAR(11), nullable=False)
     nome: Mapped[str] = mapped_column(Text, nullable=False)
     apelido: Mapped[str] = mapped_column(String(12), nullable=False)
     senha_hash: Mapped[str] = mapped_column(Text, nullable=False)

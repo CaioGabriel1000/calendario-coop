@@ -7,18 +7,21 @@ from app.auth import hash_token
 from app.models import Sessao, Usuario
 from app.senhas import gerar_hash
 from app.usuarios import criar_usuario
+from apoio import telefone_de_teste
 
 
 def preparar_usuario(
     db_session,
     *,
     email="ana@example.com",
+    telefone=None,
     apelido="Ana",
     senha="senha-segura",
     ativo=True,
 ):
     usuario = Usuario(
         email=email,
+        telefone=telefone or telefone_de_teste(email),
         nome="Ana Souza",
         apelido=apelido,
         senha_hash=gerar_hash(senha),
@@ -37,25 +40,44 @@ def csrf_do_login(client):
     return token.group(1)
 
 
-def fazer_login(client, email="ana@example.com", senha="senha-segura"):
+def fazer_login(client, identificador="ana@example.com", senha="senha-segura"):
     csrf_token = csrf_do_login(client)
     return client.post(
         "/login",
-        data={"email": email, "senha": senha, "csrf_token": csrf_token},
+        data={
+            "identificador": identificador,
+            "senha": senha,
+            "csrf_token": csrf_token,
+        },
         follow_redirects=False,
     )
 
 
+def test_tela_login_tem_um_identificador_e_nao_oferece_cadastro(client):
+    resposta = client.get("/login", follow_redirects=False)
+    cadastro = client.get("/cadastro", follow_redirects=False)
+
+    assert resposta.status_code == 200
+    assert 'label for="identificador">E-mail ou telefone</label>' in resposta.text
+    assert 'name="identificador" type="text"' in resposta.text
+    assert 'label for="senha">Senha</label>' in resposta.text
+    assert 'name="senha" type="password"' in resposta.text
+    assert ">Entrar</button>" in resposta.text
+    assert "cadastro" not in resposta.text.lower()
+    assert cadastro.status_code == 404
+
+
 def test_login_correto_cria_sessao_e_mostra_apelido(client, db_session):
-    criar_usuario(
+    usuario = criar_usuario(
         db_session,
         email="ana@example.com",
+        telefone=telefone_de_teste("ana@example.com"),
         nome="Ana Souza",
         apelido="Ana",
         senha="senha-segura",
     )
 
-    response = fazer_login(client)
+    response = fazer_login(client, identificador=" ANA@EXAMPLE.COM ")
 
     assert response.status_code == 303
     assert response.headers["location"] == "/"
@@ -73,10 +95,29 @@ def test_login_correto_cria_sessao_e_mostra_apelido(client, db_session):
     assert "Ana" in pagina.text
     assert 'id="grade-container"' in pagina.text
 
+    client.cookies.delete("sessao")
+    login_por_telefone = fazer_login(client, identificador=usuario.telefone)
+    assert login_por_telefone.status_code == 303
+    sessoes = list(
+        db_session.scalars(
+            select(Sessao).where(Sessao.usuario_id == usuario.id)
+        ).all()
+    )
+    assert len(sessoes) == 2
+
+
+def test_login_aceita_telefone_com_mascara(client, db_session):
+    preparar_usuario(db_session, telefone="31999999999")
+
+    response = fazer_login(client, identificador="(31) 99999-9999")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+
 
 def test_credenciais_invalidas_e_usuario_desativado_usam_mesmo_erro(client, db_session):
     preparar_usuario(db_session)
-    preparar_usuario(
+    inativo = preparar_usuario(
         db_session,
         email="desativada@example.com",
         apelido="Desativada",
@@ -84,23 +125,37 @@ def test_credenciais_invalidas_e_usuario_desativado_usam_mesmo_erro(client, db_s
     )
 
     senha_errada = fazer_login(client, senha="incorreta")
+    telefone_senha_errada = fazer_login(
+        client,
+        identificador=telefone_de_teste("ana@example.com"),
+        senha="incorreta",
+    )
     usuario_inativo = fazer_login(
         client,
-        email="desativada@example.com",
+        identificador="desativada@example.com",
+        senha="senha-segura",
+    )
+    telefone_inativo = fazer_login(
+        client,
+        identificador=inativo.telefone,
         senha="senha-segura",
     )
     usuario_desconhecido = fazer_login(
         client,
-        email="desconhecida@example.com",
+        identificador="desconhecida@example.com",
         senha="senha-segura",
     )
 
     assert senha_errada.status_code == 200
+    assert telefone_senha_errada.status_code == 200
     assert usuario_inativo.status_code == 200
+    assert telefone_inativo.status_code == 200
     assert usuario_desconhecido.status_code == 200
-    assert "E-mail ou senha inválidos." in senha_errada.text
-    assert "E-mail ou senha inválidos." in usuario_inativo.text
-    assert "E-mail ou senha inválidos." in usuario_desconhecido.text
+    assert "E-mail, telefone ou senha inválidos." in senha_errada.text
+    assert "E-mail, telefone ou senha inválidos." in telefone_senha_errada.text
+    assert "E-mail, telefone ou senha inválidos." in usuario_inativo.text
+    assert "E-mail, telefone ou senha inválidos." in telefone_inativo.text
+    assert "E-mail, telefone ou senha inválidos." in usuario_desconhecido.text
 
 
 def test_usuario_sem_sessao_e_redirecionado_para_login(client):
