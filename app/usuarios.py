@@ -1,6 +1,7 @@
 """Operações de cadastro e consulta de usuários."""
 
 from datetime import date
+import re
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +13,17 @@ from app.telefones import normalizar_telefone
 
 TAMANHO_MINIMO_SENHA = 8
 TAMANHO_MAXIMO_APELIDO = 12
+PADRAO_CARACTERES_SENHA = re.compile(r"[A-Za-z0-9!#$%&*+._-]+\Z")
+
+
+def validar_senha(senha: str, *, nova: bool = False) -> None:
+    rotulo = "A nova senha" if nova else "A senha"
+    if len(senha) < TAMANHO_MINIMO_SENHA:
+        raise ValueError(f"{rotulo} deve ter no mínimo 8 caracteres.")
+    if PADRAO_CARACTERES_SENHA.fullmatch(senha) is None:
+        raise ValueError(
+            f"{rotulo} pode conter apenas letras, números e os símbolos !#$%&*+._-."
+        )
 
 
 class ErroAlteracaoSenha(ValueError):
@@ -70,8 +82,7 @@ def criar_usuario(
         raise ValueError("O apelido é obrigatório.")
     if len(apelido_normalizado) > TAMANHO_MAXIMO_APELIDO:
         raise ValueError("O apelido deve ter no máximo 12 caracteres.")
-    if len(senha) < TAMANHO_MINIMO_SENHA:
-        raise ValueError("A senha deve ter no mínimo 8 caracteres.")
+    validar_senha(senha)
 
     if db.scalar(select(Usuario.id).where(Usuario.email == email_normalizado)):
         raise UsuarioDuplicadoError("Este e-mail já está cadastrado.")
@@ -129,8 +140,10 @@ def alterar_senha_usuario(
     )
     if usuario is None or not verificar_senha(usuario.senha_hash, senha_atual):
         raise ErroAlteracaoSenha("A senha atual está incorreta.")
-    if len(nova_senha) < TAMANHO_MINIMO_SENHA:
-        raise ErroAlteracaoSenha("A nova senha deve ter no mínimo 8 caracteres.")
+    try:
+        validar_senha(nova_senha, nova=True)
+    except ValueError as exc:
+        raise ErroAlteracaoSenha(str(exc)) from exc
     if nova_senha != confirmacao:
         raise ErroAlteracaoSenha("A confirmação da nova senha não confere.")
 
@@ -152,8 +165,7 @@ def resetar_senha_usuario(
     email: str | None = None,
     telefone: str | None = None,
 ) -> Usuario:
-    if len(senha) < TAMANHO_MINIMO_SENHA:
-        raise ValueError("A senha deve ter no mínimo 8 caracteres.")
+    validar_senha(senha, nova=True)
     usuario = _buscar_usuario(db, email=email, telefone=telefone)
     if usuario is None:
         raise UsuarioNaoEncontradoError("Usuário não encontrado.")

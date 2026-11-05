@@ -11,7 +11,7 @@ from app.cli import app as cli_app
 from app.main import app as web_app
 from app.models import Marcacao, Sessao, StatusMarcacao, Usuario
 from app.senhas import verificar_senha
-from app.usuarios import UsuarioDuplicadoError, criar_usuario
+from app.usuarios import UsuarioDuplicadoError, criar_usuario, validar_senha
 from apoio import telefone_de_teste
 
 runner = CliRunner()
@@ -203,6 +203,15 @@ def test_senha_com_menos_de_oito_caracteres_e_recusada(db_session):
         criar(db_session, senha="curta")
 
     assert db_session.query(Usuario).count() == 0
+
+
+def test_validacao_de_senha_aceita_simbolos_permitidos():
+    validar_senha("Senha-segura_1!")
+
+
+def test_validacao_de_senha_recusa_arroba():
+    with pytest.raises(ValueError, match="apenas letras, números"):
+        validar_senha("Senha@segura1")
 
 
 def test_reset_password_limpa_bloqueio_e_encerra_sessoes(

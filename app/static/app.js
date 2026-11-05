@@ -5,6 +5,15 @@ document.body.addEventListener("htmx:beforeSwap", (event) => {
   }
 });
 
+document.addEventListener("input", (event) => {
+  const campo = event.target;
+  if (!(campo instanceof HTMLInputElement) || !campo.matches("[data-password-policy]")) {
+    return;
+  }
+
+  campo.value = campo.value.replace(/[^A-Za-z0-9!#$%&*+._-]/g, "");
+});
+
 document.body.addEventListener("htmx:afterSettle", (event) => {
   const alvo = event.detail.target;
   if (!alvo?.matches("#painel-host, #painel-dia")) {

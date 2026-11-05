@@ -20,11 +20,14 @@
 
       <label for="nova-senha">Nova senha</label>
       <input id="nova-senha" name="nova_senha" type="password"
-             autocomplete="new-password" minlength="8" required>
+             autocomplete="new-password" minlength="8"
+             pattern="[A-Za-z0-9!#$%&amp;*+._-]+" data-password-policy required>
+      <small>Use pelo menos 8 caracteres: letras, números e símbolos !#$%&amp;*+._-.</small>
 
       <label for="confirmar-senha">Confirmar nova senha</label>
       <input id="confirmar-senha" name="confirmar_senha" type="password"
-             autocomplete="new-password" minlength="8" required>
+             autocomplete="new-password" minlength="8"
+             pattern="[A-Za-z0-9!#$%&amp;*+._-]+" data-password-policy required>
 
       <button type="submit">Salvar nova senha</button>
     </form>

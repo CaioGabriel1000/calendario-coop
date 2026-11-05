@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from functools import lru_cache
 import os
 
+from sqlalchemy.engine import URL
+
 
 def _bool_env(name: str, default: bool) -> bool:
     value = os.getenv(name)
@@ -32,10 +34,14 @@ def get_settings() -> Settings:
     postgres_db = os.getenv("POSTGRES_DB", "calendario")
     postgres_user = os.getenv("POSTGRES_USER", "calendario")
     postgres_password = os.getenv("POSTGRES_PASSWORD", "local_dev_only")
-    default_url = (
-        f"postgresql+psycopg://{postgres_user}:{postgres_password}"
-        f"@localhost:5432/{postgres_db}"
-    )
+    default_url = URL.create(
+        "postgresql+psycopg",
+        username=postgres_user,
+        password=postgres_password,
+        host="localhost",
+        port=5432,
+        database=postgres_db,
+    ).render_as_string(hide_password=False)
     return Settings(
         dominio=os.getenv("DOMINIO", "localhost"),
         postgres_db=postgres_db,
